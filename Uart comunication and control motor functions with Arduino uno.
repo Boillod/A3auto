@@ -1,0 +1,62 @@
+//othor : Loïc Boillod
+//date : 02/05/2019
+//title : Uart comunication and control motor functions with Arduino uno.
+#include <PWM.h>
+
+int pin_motor_speed = 9; //the pin that the motor for speed is attached to.
+int pin_motor_direction = 10; //the pin that the motor for direction is attached to.
+int32_t frequency = 62; //frequency (in Hz)
+int32_t message;
+uint8_t error = 0;
+
+const int messages_len=8; //sets the number of bytes of the messages betaween arduino and RaspberryPi.
+byte readed_message[messages_len];
+
+void setup() {  
+    Serial.begin(9600); //sets the baud rate (bit/s)
+    InitTimersSafe(); //initialize all timers except for 0, to save time keeping functions
+    bool motor_speed_success = SetPinFrequencySafe(pin_motor_speed, frequency); //sets the frequency for the specified pin  
+    bool motor_direction_success = SetPinFrequencySafe(pin_motor_direction, frequency); //sets the frequency for the specified pin  
+    pwmWriteHR(pin_motor_direction, 5500);//sets the angle of the weels at the mid.
+    pwmWriteHR(pin_motor_speed, 6000); //sets the speed of the weels at 0.
+    delay(2000);
+}
+uint8_t speed_motor(uint16_t final_speed){ //final_speed betwen 0 and 100.
+    final_speed=(final_speed*20)+6000; //convertion 
+    if ((final_speed<=8000) && (final_speed>=5000)){
+      pwmWriteHR(pin_motor_speed, final_speed);//set the PWM
+    return 0;
+    }
+    return 1; //error value
+}
+uint8_t direction_motor(uint16_t final_angle){ //final_angle betwen 0(right), 50(mid) and 100(left)  
+    final_angle=(final_angle*22)+5000; //convertion
+    if ((final_angle<=7200) && (final_angle>=5000)){
+      pwmWriteHR(pin_motor_direction, final_angle); //set the PWM 
+    return 0; 
+    }
+    return 1; //error value
+}
+uint8_t read_message(void){
+  if (Serial.available()) {     
+    message=Serial.read();
+    return 0;   
+  }
+  return 1; //error value
+}
+void loop() {
+    delay(100); //every 100ms.
+    read_message(); //the firt byte in UART is catched into the variable named "message".
+    if (((message)&&(128))==128){ //if the first bit of the byte is "1", it's a forward order.
+      error=speed_motor(message-128); //message-128 is a value between 0 and 100.
+      if (error==1){
+        Serial.println(255); //Error : value of speed is not correct.   
+      }
+    }
+    else { //first bit of the byte is "0", it's a direction order.
+      error=direction_motor(message);//message is a value between 0 and 100.
+      if (error==1){
+        Serial.println(255); //Error : value of direction is not correct.
+      }
+    }
+}
