@@ -1,6 +1,6 @@
 //othor : Loïc Boillod
 //date : 02/05/2019
-//title : Uart comunication and control motor functions with Arduino uno.
+//title : Uart communication and control motor functions with Arduino uno.
 #include <PWM.h>
 
 int pin_motor_speed = 9; //the pin that the motor for speed is attached to.
